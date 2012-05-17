@@ -10,6 +10,7 @@ import feedparser
 import codecs
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
+from threading import Thread
 
 SUBSCRIPTIONS = [
     'http://11011110.livejournal.com/data/rss',
@@ -113,32 +114,51 @@ threeday = timedelta(days = 3)
 sevenday = timedelta(days = 7)
 now = datetime.now ()
 
+class Fetcher(Thread):
+    def __init__(self, rss_url, articles):
+        super(Fetcher, self).__init__()
+        self._rss_url = rss_url
+        self._articles = articles
+
+    def run(self):
+        s = self._rss_url
+        print s
+        try:
+            f = feedparser.parse(s)
+            print f.feed.title
+            articles[f.feed.title] = []
+            for e in f.entries:
+                if 'published_parsed' in e.keys():
+                    pub = e.published_parsed
+                else:
+                    pub = e.updated_parsed
+                pub_date = datetime(pub.tm_year, pub.tm_mon, pub.tm_mday, pub.tm_hour, pub.tm_min)
+                if (now - pub_date) < twoday:
+                    print '   ', e.title
+                    if 'content' in e.keys():
+                        body = e.content[0].value
+                    else:
+                        body = e.summary
+                    #plain_text = nltk.clean_html(body)
+                    plain_text = BeautifulSoup(body).get_text()
+                    self._articles[f.feed.title].append((e.title, plain_text))
+        except Exception as e:
+            print '== error==', e
+        
+
 # This is a map: feed_title -> list of articles
 articles = {}
+threads = []
 for s in SUBSCRIPTIONS:
-    print s
-    try:
-        f = feedparser.parse(s)
-        print f.feed.title
-        articles[f.feed.title] = []
-        for e in f.entries:
-            if 'published_parsed' in e.keys():
-                pub = e.published_parsed
-            else:
-                pub = e.updated_parsed
-            pub_date = datetime(pub.tm_year, pub.tm_mon, pub.tm_mday, pub.tm_hour, pub.tm_min)
-            if (now - pub_date) < oneday:
-                print '   ', e.title
-                if 'content' in e.keys():
-                    body = e.content[0].value
-                else:
-                    body = e.summary
-                #plain_text = nltk.clean_html(body)
-                plain_text = BeautifulSoup(body).get_text()
-                articles[f.feed.title].append((e.title, plain_text))
-    except Exception as e:
-        print '== error==', e
+    t = Fetcher(s, articles)
+    threads.append(t)
+    t.start()
 
+# Join
+for t in threads:
+    t.join()
+
+print "OK, got all the feeds..."
 
 # OK, now we have the dict with all the content... ditch it out to files...
 for f in articles:
