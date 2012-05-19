@@ -53,32 +53,31 @@ class Fetcher(Thread):
                 plain_text = BeautifulSoup(body).get_text()
                 self._articles[f.feed.title].append((e.title, plain_text))
 
+if __name__ == '__main__':
+    # Read subscriptions from other file.
+    subscriptions = eval(open('subscriptions.py').read())
 
-# Read subscriptions from other file.
-subscriptions = eval(open('subscriptions.py').read())
+    # This is a map: feed_title -> list of articles
+    articles = {}
+    threads = []
+    for s in subscriptions:
+        t = Fetcher(s, articles)
+        threads.append(t)
+        t.start()
 
-# This is a map: feed_title -> list of articles
-articles = {}
-threads = []
-for s in subscriptions:
-    t = Fetcher(s, articles)
-    threads.append(t)
-    t.start()
+    # Join
+    for t in threads:
+        t.join()
 
-# Join
-for t in threads:
-    t.join()
+    print "OK, got all the feeds..."
 
-print "OK, got all the feeds..."
-
-# OK, now we have the dict with all the content... ditch it out to files...
-for f in articles:
-    for a in articles[f]:
-        title, body = a
-        filename = now.strftime('%m_%d_%Y') + '_' + f + '_' + title + '.txt'
-        # Remove '/' from filenames
-        filename = filename.replace('/', '_')
-        fh = codecs.open(filename, encoding='utf-8', mode='w+')
-        fh.write(body)
-        fh.close()
-
+    # OK, now we have the dict with all the content... ditch it out to files.
+    for f in articles:
+        for a in articles[f]:
+            title, body = a
+            filename = now.strftime('%m_%d_%Y') + '_' + f + '_' + title + '.txt'
+            # Remove '/' from filenames
+            filename = filename.replace('/', '_')
+            fh = codecs.open(filename, encoding='utf-8', mode='w+')
+            fh.write(body)
+            fh.close()
