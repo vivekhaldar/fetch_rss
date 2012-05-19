@@ -5,25 +5,22 @@
 #
 # Author: Vivek Haldar <vh@vivekhaldar.com>
 
+import argparse
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from threading import Thread
 import codecs
 import feedparser
 
-oneday = timedelta(days = 1)
-twoday = timedelta(days = 2)
-threeday = timedelta(days = 3)
-sevenday = timedelta(days = 7)
-now = datetime.now ()
 
 # Fetch each RSS feed in a thread by itself, so that we can grab all of them in
 # parallel.
 class Fetcher(Thread):
-    def __init__(self, rss_url, articles):
+    def __init__(self, rss_url, articles, days):
         super(Fetcher, self).__init__()
         self._rss_url = rss_url
         self._articles = articles
+        self._days = days
 
     def run(self):
         s = self._rss_url
@@ -42,9 +39,11 @@ class Fetcher(Thread):
                 pub = e.published_parsed
             else:
                 pub = e.updated_parsed
+            now = datetime.now ()
             pub_date = datetime(pub.tm_year, pub.tm_mon, pub.tm_mday,
                                 pub.tm_hour, pub.tm_min)
-            if (now - pub_date) < twoday:
+            daydelta = timedelta(days = self._days)
+            if (now - pub_date) < daydelta:
                 print '   ', e.title
                 if 'content' in e.keys():
                     body = e.content[0].value
@@ -54,6 +53,12 @@ class Fetcher(Thread):
                 self._articles[f.feed.title].append((e.title, plain_text))
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("days", help='Fetch articles going back this many days',
+                        type=int)
+    args = parser.parse_args()
+    print 'Fetching the last %d days' % args.days
+
     # Read subscriptions from other file.
     subscriptions = eval(open('subscriptions.py').read())
 
@@ -61,7 +66,7 @@ if __name__ == '__main__':
     articles = {}
     threads = []
     for s in subscriptions:
-        t = Fetcher(s, articles)
+        t = Fetcher(s, articles, args.days)
         threads.append(t)
         t.start()
 
@@ -72,6 +77,7 @@ if __name__ == '__main__':
     print "OK, got all the feeds..."
 
     # OK, now we have the dict with all the content... ditch it out to files.
+    now = datetime.now ()
     for f in articles:
         for a in articles[f]:
             title, body = a
