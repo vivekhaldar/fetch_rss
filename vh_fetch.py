@@ -81,7 +81,10 @@ if __name__ == '__main__':
     for f in articles:
         for a in articles[f]:
             title, body = a
-            filename = now.strftime('%m_%d_%Y') + '_' + f + '_' + title + '.txt'
+            numwords = '%05d' % len(body.split())
+            # Cut feed title down to 2 words.
+            short_feed_name = ' '.join(f.split()[:2])
+            filename = numwords + '_' + short_feed_name + '_' + title + '.txt'
             # Remove '/' from filenames
             filename = filename.replace('/', '_')
             fh = codecs.open(filename, encoding='utf-8', mode='w+')
