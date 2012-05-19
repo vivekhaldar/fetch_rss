@@ -6,7 +6,6 @@
 # Author: Vivek Haldar <vh@vivekhaldar.com>
 
 import feedparser
-#import nltk
 import codecs
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
@@ -139,7 +138,6 @@ class Fetcher(Thread):
                         body = e.content[0].value
                     else:
                         body = e.summary
-                    #plain_text = nltk.clean_html(body)
                     plain_text = BeautifulSoup(body).get_text()
                     self._articles[f.feed.title].append((e.title, plain_text))
         except Exception as e:
