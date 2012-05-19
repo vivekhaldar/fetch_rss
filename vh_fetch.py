@@ -5,11 +5,11 @@
 #
 # Author: Vivek Haldar <vh@vivekhaldar.com>
 
-import feedparser
-import codecs
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 from threading import Thread
+import codecs
+import feedparser
 
 oneday = timedelta(days = 1)
 twoday = timedelta(days = 2)
@@ -17,6 +17,8 @@ threeday = timedelta(days = 3)
 sevenday = timedelta(days = 7)
 now = datetime.now ()
 
+# Fetch each RSS feed in a thread by itself, so that we can grab all of them in
+# parallel.
 class Fetcher(Thread):
     def __init__(self, rss_url, articles):
         super(Fetcher, self).__init__()
@@ -27,26 +29,31 @@ class Fetcher(Thread):
         s = self._rss_url
         print s
         try:
-            f = feedparser.parse(s)
-            print f.feed.title
-            articles[f.feed.title] = []
-            for e in f.entries:
-                if 'published_parsed' in e.keys():
-                    pub = e.published_parsed
-                else:
-                    pub = e.updated_parsed
-                pub_date = datetime(pub.tm_year, pub.tm_mon, pub.tm_mday, pub.tm_hour, pub.tm_min)
-                if (now - pub_date) < twoday:
-                    print '   ', e.title
-                    if 'content' in e.keys():
-                        body = e.content[0].value
-                    else:
-                        body = e.summary
-                    plain_text = BeautifulSoup(body).get_text()
-                    self._articles[f.feed.title].append((e.title, plain_text))
+            self.fetch()
         except Exception as e:
             print '== error==', e
-        
+
+    def fetch(self):
+        f = feedparser.parse(s)
+        print f.feed.title
+        self._articles[f.feed.title] = []
+        for e in f.entries:
+            if 'published_parsed' in e.keys():
+                pub = e.published_parsed
+            else:
+                pub = e.updated_parsed
+            pub_date = datetime(pub.tm_year, pub.tm_mon, pub.tm_mday,
+                                pub.tm_hour, pub.tm_min)
+            if (now - pub_date) < twoday:
+                print '   ', e.title
+                if 'content' in e.keys():
+                    body = e.content[0].value
+                else:
+                    body = e.summary
+                plain_text = BeautifulSoup(body).get_text()
+                self._articles[f.feed.title].append((e.title, plain_text))
+
+
 # Read subscriptions from other file.
 subscriptions = eval(open('subscriptions.py').read())
 
