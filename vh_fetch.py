@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     # Join
     for t in threads:
-        t.join()
+        t.join(30.0)  # 30 s timeout.
 
     print "OK, got all the feeds..."
 
