@@ -9,8 +9,8 @@ import argparse
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from threading import Thread
-import codecs
 import feedparser
+import output_file
 
 
 # Fetch each RSS feed in a thread by itself, so that we can grab all of them in
@@ -77,16 +77,4 @@ if __name__ == '__main__':
     print "OK, got all the feeds..."
 
     # OK, now we have the dict with all the content... ditch it out to files.
-    now = datetime.now ()
-    for f in articles:
-        for a in articles[f]:
-            title, body = a
-            numwords = '%05d' % len(body.split())
-            # Cut feed title down to 2 words.
-            short_feed_name = ' '.join(f.split()[:2])
-            filename = numwords + '_' + short_feed_name + '_' + title + '.txt'
-            # Remove '/' from filenames
-            filename = filename.replace('/', '_')
-            fh = codecs.open(filename, encoding='utf-8', mode='w+')
-            fh.write(body)
-            fh.close()
+    output_file.OutputFile(articles).output()
