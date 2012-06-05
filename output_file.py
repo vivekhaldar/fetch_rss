@@ -26,5 +26,7 @@ class OutputFile(output.Output):
                 # Remove '/' from filenames
                 filename = filename.replace('/', '_')
                 fh = codecs.open(filename, encoding='utf-8', mode='w+')
+                fh.write(f + '\n')
+                fh.write(title + '\n')
                 fh.write(body)
                 fh.close()
