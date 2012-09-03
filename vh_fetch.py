@@ -1,5 +1,7 @@
 #! /usr/bin/python
 #
+# Copyright (C) 2012 Vivek Haldar
+#
 # This sucks down all my RSS feeds and spits out articles from the
 # last 24 hours out to text files in the current directory.
 #

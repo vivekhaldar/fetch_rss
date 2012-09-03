@@ -1,3 +1,5 @@
+# Copyright (C) 2012 Vivek Haldar
+#
 # Generic superclass for outputting RSS data.
 #
 # Author: Vivek Haldar <vh@vivekhaldar.com>

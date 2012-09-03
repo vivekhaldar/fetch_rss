@@ -1,3 +1,5 @@
+# Copyright (C) 2012 Vivek Haldar
+#
 # Take in a dict containing fetched RSS data, and output to text files in the
 # current directory.
 #
