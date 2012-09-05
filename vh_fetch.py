@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 import feedparser
 import output_file
+import output_prn
 
 
 # Fetch each RSS feed in a thread by itself, so that we can grab all of them in
@@ -58,11 +59,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("days", help='Fetch articles going back this many days',
                         type=int)
+    parser.add_argument("--prn", help='If true, use the print subscriptions and output prn',
+                        action='store_true')
     args = parser.parse_args()
     print 'Fetching the last %d days' % args.days
+    print 'Print? ', args.prn
 
     # Read subscriptions from other file.
-    subscriptions = eval(open('subscriptions.py').read())
+    subs_file = ''
+    if args.prn:
+        subs_file = 'subscriptions_print.py'
+    else:
+        subs_file = 'subscriptions.py'
+    subscriptions = eval(open(subs_file).read())
 
     # This is a map: feed_title -> list of articles
     articles = {}
@@ -79,4 +88,7 @@ if __name__ == '__main__':
     print "OK, got all the feeds..."
 
     # OK, now we have the dict with all the content... ditch it out to files.
-    output_file.OutputFile(articles).output()
+    if args.prn:
+        output_prn.OutputPrn(articles).output()
+    else:
+        output_file.OutputFile(articles).output()

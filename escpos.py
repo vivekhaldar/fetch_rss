@@ -6,6 +6,7 @@
 @license: GPL
 '''
 
+import codecs
 import Image
 import time
 
@@ -14,12 +15,9 @@ from exceptions import *
 
 class Escpos:
     """ ESC/POS Printer object """
-    handle    = None
-    device    = None
 
     def __init__(self, filename):
-        self.filename = filename
-        self.prnfile = open(filename, 'w')
+        self.prnfile = codecs.open(filename, encoding='utf-8', mode='w+')
 
 
     def _raw(self, msg):
