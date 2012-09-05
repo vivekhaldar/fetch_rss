@@ -192,7 +192,7 @@ class Escpos:
             raise TextError()
 
     def bigtext(self, txt):
-       self.set(height=1, width=2)
+       self.set(height=2, width=1)
        self.text(txt)
        self.set(type='normal')
 
