@@ -6,58 +6,25 @@
 @license: GPL
 '''
 
-import usb.core
-import usb.util
 import Image
 import time
 
 from constants import *
 from exceptions import *
 
-class DeviceDescriptor:
-    """ Search device on USB tree and return it if found """
-    def __init__(self, idVendor, idProduct, interface) :
-        self.idVendor = idVendor
-        self.idProduct = idProduct
-        self.interface = interface
-
-    def get_device(self) :
-	device = usb.core.find(idVendor=self.idVendor, idProduct=self.idProduct)
-	return device
-
 class Escpos:
     """ ESC/POS Printer object """
     handle    = None
     device    = None
 
-    def __init__(self, idVendor, idProduct, interface=0, in_ep=0x82, out_ep=0x01) :
-        self.idVendor  = idVendor
-        self.idProduct = idProduct
-        self.interface = interface
-        self.in_ep     = in_ep
-        self.out_ep    = out_ep
-
-        device_descriptor = DeviceDescriptor(self.idVendor, self.idProduct, self.interface)
-        self.device = device_descriptor.get_device()
-        if self.device is None:
-            print "Cable isn't plugged in"
-
-	if self.device.is_kernel_driver_active(0):
-		try:
-			self.device.detach_kernel_driver(0)
-		except usb.core.USBError as e:
-			print "Could not detatch kernel driver: %s" % str(e)
-
-	try:
-		self.device.set_configuration()
-		self.device.reset()
-	except usb.core.USBError as e:
-		print "Could not set configuration: %s" % str(e)
+    def __init__(self, filename):
+        self.filename = filename
+        self.prnfile = open(filename, 'w')
 
 
     def _raw(self, msg):
         """ Print any of the commands above, or clear text """
-        self.device.write(self.out_ep, msg, self.interface)
+        self.prnfile.write(msg)
         
 
     def _check_image_size(self, size):
@@ -91,6 +58,30 @@ class Escpos:
                 self._raw(buffer.decode("hex"))
                 buffer = ""
                 cont = 0
+
+    def img2ascii(self, image):
+        ascii_chars = [ '#', 'A', '@', '%', 'S', '+', '<', '*', ':', ',', '.']
+	image_as_ascii = []
+	all_pixels = list(image.getdata())
+	for pixel_value in all_pixels:
+		index = pixel_value / 25 # 0 - 10
+		image_as_ascii.append(ascii_chars[index])
+	return image_as_ascii	
+
+    def asciiart(self, img):
+	img = Image.open(img)
+	width, heigth = img.size
+	new_width = 32 
+	new_heigth = int((heigth * new_width) / width)
+	new_image = img.resize((new_width, new_heigth))
+	new_image = new_image.convert("L") # convert to grayscale
+
+	# now that we have a grayscale image with some fixed width we have to convert every pixel
+	# to the appropriate ascii character from "ascii_chars"
+	img_as_ascii = self.img2ascii(new_image)
+	img_as_ascii = ''.join(ch for ch in img_as_ascii)
+	for c in range(0, len(img_as_ascii), new_width):
+            self._raw(img_as_ascii[c:c+new_width])
 
 
     def image(self, img):
@@ -202,6 +193,11 @@ class Escpos:
         else:
             raise TextError()
 
+    def bigtext(self, txt):
+       self.set(height=1, width=2)
+       self.text(txt)
+       self.set(type='normal')
+
 
     def set(self, align='left', font='a', type='normal', width=1, height=1):
         """ Set text properties """
@@ -220,7 +216,6 @@ class Escpos:
         # Type
         if type.upper() == "B":
             self._raw(TXT_BOLD_ON)
-            self._raw(TXT_UNDERL_OFF)
         elif type.upper() == "U":
             self._raw(TXT_BOLD_OFF)
             self._raw(TXT_UNDERL_ON)
@@ -250,39 +245,6 @@ class Escpos:
             self._raw(TXT_NORMAL)
 
 
-    def cut(self, mode=''):
-        """ Cut paper """
-        # Fix the size between last line and cut
-        # TODO: handle this with a line feed
-        self._raw("\n\n\n\n\n\n")
-        if mode.upper() == "PART":
-            self._raw(PAPER_PART_CUT)
-        else: # DEFAULT MODE: FULL CUT
-            self._raw(PAPER_FULL_CUT)
-
-
-    def cashdraw(self, pin):
-        """ Send pulse to kick the cash drawer """
-        if pin == 2:
-            self._raw(CD_KICK_2)
-        elif pin == 5:
-            self._raw(CD_KICK_5)
-        else:
-            raise CashDrawerError()
-
-
-    def hw(self, hw):
-        """ Hardware operations """
-        if hw.upper() == "INIT":
-            self._raw(HW_INIT)
-        elif hw.upper() == "SELECT":
-            self._raw(HW_SELECT)
-        elif hw.upper() == "RESET":
-            self._raw(HW_RESET)
-        else: # DEFAULT: DOES NOTHING
-            pass
-
-
     def control(self, ctl):
         """ Feed control sequences """
         if ctl.upper() == "LF":
@@ -297,20 +259,10 @@ class Escpos:
             self._raw(CTL_VT)
 
 
+    def flush(self):
+       self.prnfile.flush()
+
+
     def __del__(self):
         """ Release device interface """
-        if self.handle:
-            try:
-                self.handle.releaseInterface()
-                self.handle.resetEndpoint(self.out_ep)
-                self.handle.reset()
-            except Exception, err:
-                print err
-            self.handle, self.device = None, None
-            # Give a chance to return the interface to the system
-            # The following message could appear if the application is executed 
-            # too fast twice or more times.
-            # 
-            # >> could not detach kernel driver from interface 0: No data available
-            # >> No interface claimed
-            time.sleep(1)
+        self.prnfile.close()
