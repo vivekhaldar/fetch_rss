@@ -20,7 +20,7 @@ class OutputPrn(output.Output):
     def output(self):
         articles = self._articles
         for f in articles:
-            prn = escpos.Escpos('%s.prn' % f)
+            prn = escpos.Escpos('%s.prn' % f.replace('/', '_'))
             for a in articles[f]:
                 title, body = a
                 # Cut body down to 100 words.
