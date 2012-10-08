@@ -17,12 +17,16 @@ class Escpos:
     """ ESC/POS Printer object """
 
     def __init__(self, filename):
-        self.prnfile = codecs.open(filename, encoding='utf-8', mode='w+')
+        # self.prnfile = codecs.open(filename, encoding='utf-8', mode='w+')
+        self.prnfile = open(filename, mode='w+')
 
 
     def _raw(self, msg):
         """ Print any of the commands above, or clear text """
         self.prnfile.write(msg)
+
+    def _text(self, msg):
+        self.prnfile.write(msg.encode('utf-8'))
         
 
     def _check_image_size(self, size):
@@ -79,7 +83,7 @@ class Escpos:
 	img_as_ascii = self.img2ascii(new_image)
 	img_as_ascii = ''.join(ch for ch in img_as_ascii)
 	for c in range(0, len(img_as_ascii), new_width):
-            self._raw(img_as_ascii[c:c+new_width])
+            self._text(img_as_ascii[c:c+new_width])
 
 
     def image(self, img):
@@ -187,7 +191,7 @@ class Escpos:
     def text(self, txt):
         """ Print alpha-numeric text """
         if txt:
-            self._raw(txt)
+            self._text(txt)
         else:
             raise TextError()
 
